@@ -38,7 +38,7 @@ datply <- dat %>% group_by(Date, wyjday, WY) %>% summarize(SumCatch = sum(Catch,
 
 datply <- datply %>%
   group_by(WY) %>%
-  mutate(freq = 100*SumCatch / sum(SumCatch, na.rm = T)) %>% filter(WY >2010) %>% ungroup()
+  mutate(freq = 100*SumCatch / sum(SumCatch, na.rm = T)) %>% filter(WY >2009 & WY<2022) %>% ungroup()
 
 ggplot(datply, aes(x = wyjday, y = freq)) + geom_bar(stat = "identity") + facet_grid(WY ~ .)
 # save(von, file = "C:/Users/ejholmes/Box/Holmes/Presentations/Floodplain_symposium/Data_output/von_floodtyped.Rdata")
@@ -47,40 +47,68 @@ ggplot(datply, aes(x = wyjday, y = freq)) + geom_bar(stat = "identity") + facet_
 # VonHydro ----------------------------------------------------------------
 load("C:/Users/ejholmes/Box/Holmes/Presentations/Floodplain_symposium/Data_output/von_floodtyped.Rdata")
 von <- von[is.na(von$Flow) == F & von$Flow > 1000,]
+# saveplots = TRUE
 if(saveplots == TRUE){png("output/chinook_VON_river_panel_%03d.png", 
-                          family = "serif", res = 700, height = 5, width = 5, units = "in")}
-getwd()
+                          family = "serif", res = 700, height = 6, width = 5, units = "in")}
+
 ggplot(von[von$WY %in% c(2012:2021),], aes(x = wyjday, y = Flow)) + geom_line(color = "black") +
   geom_ribbon(data = von[von$WY %in% c(2012:2021),],
               aes(ymin = 0, ymax = Flow), fill = "#56B4E9") + 
   scale_fill_brewer(palette = "Set1") + labs(x = NULL, y = "Discharge (cfs)") +
-  theme_classic() + theme(legend.position = "bottom", panel.border = element_blank()) + 
+  theme_classic() + 
+  theme(legend.position = "bottom", panel.border = element_blank(), strip.text.y = element_blank()) + 
   facet_grid(WY ~ .) +
   geom_bar(data = datply, aes(x = wyjday, y = freq), stat = "identity") +
   scale_y_continuous(breaks = seq(0,75000, 25000), labels = paste(seq(0,75,25),"k", sep = "")) +
   scale_x_continuous(breaks = c(0, 31, 61, 92, 123, 151, 182, 212, 243, 273, 304, 334), limits = c(0,365), 
                      labels = c("Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"))
 
-coeff <- 1/750000000000000000
+facet_labs <- data.frame(WY = c(2010:2021), Lab = c(2010:2021))
 coeff = 2000
 
 ggplot() + 
-  geom_line(data = von[von$WY > 2010 & von$WY < 2022,], aes(x = wyjday, y=Flow / coeff), color="skyblue") +
-  # geom_point(data = von[von$WY > 2010 & von$WY < 2022 & von$Flow > 50000,], aes(y=Flow / coeff), size=1, color="red") +
-  geom_ribbon(data = von[von$WY %in% c(2012:2021) & von$Flow > 25000,],
+  geom_line(data = von[von$WY %in% c(2010:2021),], aes(x = wyjday, y=Flow / coeff), color="skyblue") +
+  geom_ribbon(data = von[von$WY %in% c(2010:2021) & von$Flow > 25000,],
               aes(x = wyjday, ymin = 0, ymax = Flow / coeff, group = Flood_ID), fill = "skyblue") + 
-  geom_bar(data = von[von$WY %in% c(2012:2021) & von$Flow > 50000,], aes(x = wyjday, y = Flow / coeff), 
+  geom_bar(data = von[von$WY %in% c(2010:2021) & von$Flow > 50000,], aes(x = wyjday, y = Flow / coeff), 
            fill = "red", stat = "identity", alpha = .1, width = 3) +
   facet_grid(WY ~ .) +
+  geom_text(data = facet_labs,aes(x = 330, y = 39, label = Lab), fontface = "bold", size = 3) +
   scale_y_continuous( name = "Chinook % of total catch", breaks = seq(0,max(datply$freq, na.rm = T), 10),# first axis title
                       sec.axis = sec_axis(~.*coeff, breaks = seq(0,100000,25000), 
                                           labels = paste(seq(0,100,25),"K", sep = ""), name = "Discharge (cfs)")) + 
   labs(x = NULL) +
-  geom_bar(data = datply, aes(x = wyjday, y = freq), stat = "identity", width = 2, fill = "black") + theme_classic() + facet_grid(WY ~ .) +
+  geom_bar(data = datply, aes(x = wyjday, y = freq), stat = "identity", width = 2, fill = "black") + 
+  theme_classic() + theme(strip.text.y = element_blank()) +
   scale_x_continuous(limits = c(0, 360),
                      breaks = c(0, 31, 61, 92, 123, 151, 182, 212, 243, 273, 304, 334), 
                      labels = c("O", "N", "D", "J", "F", "M", "A", "M", "J", "J", "A", "S")) 
 dev.off()
+
+png("output/chinook_VON_river_wrap_%03d.png", 
+    family = "serif", res = 700, height = 4, width = 6.5, units = "in")
+ggplot() + 
+  geom_ribbon(data = von[von$WY %in% c(2010:2021) & von$Flow > 25000,],
+              aes(x = wyjday, ymin = 0, ymax = Flow / coeff, group = Flood_ID), fill = "skyblue") + 
+  geom_bar(data = von[von$WY %in% c(2010:2021) & von$Flow > 50000,], aes(x = wyjday, y = Flow / coeff), 
+           fill = "red", stat = "identity", alpha = .1, width = 3) +
+  geom_line(data = von[von$WY %in% c(2010:2021),], aes(x = wyjday, y=Flow / coeff), color="grey") +
+  facet_wrap(WY ~ .) +
+  geom_text(data = facet_labs,aes(x = 330, y = 39, label = Lab), fontface = "bold", size = 3) +
+  scale_y_continuous( name = "Chinook % of total catch", breaks = seq(0,max(datply$freq, na.rm = T), 10),# first axis title
+                      sec.axis = sec_axis(~.*coeff, breaks = seq(0,100000,25000), 
+                                          labels = paste(seq(0,100,25),"K", sep = ""), name = "Discharge (cfs)")) + 
+  labs(x = NULL) +
+  geom_bar(data = datply, aes(x = wyjday, y = freq), stat = "identity", width = 2, fill = "black") + 
+  theme_classic() + theme(strip.text.x = element_blank()) +
+  scale_x_continuous(limits = c(0, 360),
+                     breaks = c(0, 31, 61, 92, 123, 151, 182, 212, 243, 273, 304, 334), 
+                     labels = c("O", "", "D", "", "F", "", "A", "", "J", "", "A", "")) 
+dev.off()
+
+ggplot() + 
+  geom_line(data = von[von$WY %in% c(2011:2021),], aes(x = wyjday, y=Flow / coeff), color="skyblue")+
+facet_wrap(WY ~ .)
 
 ggplot(von[von$WY %in% c(2012:2021),], aes(x = wyjday, y = Flow)) + geom_line(color = "black") +
   geom_ribbon(data = von[von$WY %in% c(2012:2021) & von$Flow > 25000,],
