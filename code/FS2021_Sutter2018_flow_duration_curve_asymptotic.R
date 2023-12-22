@@ -10,20 +10,36 @@ inundate <- read.csv("data/Inundation_timesteps2.csv", header = T, stringsAsFact
 
 inundate$Acres <- inundate$Water_prop * 4729.367326
 inundate$Hectares <- inundate$Water_prop * 1913.907054
-
+dput(colnames(inundate))
+inundate <- rbind(inundate, data.frame("Remote.sensing" = c(NA, NA), 
+                                       "Type" = c("MAX","MIN"), 
+                                       "Water_pixels" = c(20943,0), 
+                                       "Flow" = c(100000,25000), 
+                                       "Water_prop" = c(1,0), 
+                                       "Stage" = c(37.83,20),
+                                       "Acres" = c(4729.3673, 0),
+                                       "Hectares" = c(1913.9071, 0)))
 vdcdec <- ddply(na.omit(von[von$Flow > 0, ]), .(Date), summarize, Flow = mean(Flow), Stage = mean(Stage))
 
 # fit <- lm(Acres ~ log(Flow), data = inundate)
 fit <- lm(Water_prop ~ poly(Flow, 2, raw = T), data = inundate)
 
-# R <- function(b, abT) 1*(1 - exp(-b*abT))
-# form <- Water_prop ~ R(b,Flow)
-# fit <- nls(form, data=inundate, start=list(b=.000001))
+## Asymptotic curve fitting
+R <- function(b, abT) 1*(1 - exp(-b*abT))
+form <- Water_prop ~ R(b,Flow)
 
-plot(inundate$Abundance,d$Richness, xlab="Abundance", ylab="Richness")
-lines(d$Abundance, predict(fit,list(x=d$Abundance)))
+fit <- nls(form, data=inundate, start=list(b=.0001))
 
-modassym <- nls(Water_prop ~ SSasymp( Flow, 1, 0, .01), data = inundate)
+fit2 <- nls(Water_prop ~ 1/(1 + ((1 - n)/n) * exp(-b*Flow)), 
+            data=inundate, start=list(b=.0001, n = .00005))
+
+fake_inundate <- data.frame(Flow = seq(25000, 100000, 1000))
+plot(Water_prop ~ Flow, inundate[inundate$Type != "MAX",], xlab="Abundance", ylab="Richness")
+lines(fake_inundate$Flow, predict(fit2,newdata = fake_inundate))
+
+modassym <- nls(Water_prop ~ SSasymp(Flow, 1, -1000, .0001), data = inundate)
+
+
 
 stagefit <- lm(Water_prop ~ poly(Stage, 2, raw = T), data = inundate)
 # fit <- lm(Water_prop ~ -1/Stage, data = inundate)
@@ -33,7 +49,7 @@ a <- as.numeric(coef(fit)[3])
 b <- as.numeric(coef(fit)[2])
 c <- as.numeric(coef(fit)[1])
 
-zero <- (-b + sqrt(b^2 - 4 * a * c))/(2*a)
+zero <- 25000
 fifty <- (-b + sqrt(b^2 - 4 * a * (c-.5)))/(2*a)
 fre <- 50000
 
