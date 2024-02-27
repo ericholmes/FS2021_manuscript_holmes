@@ -3,10 +3,11 @@ library(plyr)
 library(viridis)
 library(reshape2)
 
-saveplots = TRUE
+saveplots = F
 load("data/Sutter2018_flow_data.RDATA")
 
 inundate <- read.csv("data/Inundation_timesteps2.csv", header = T, stringsAsFactors = F)
+inundate$Flow.cms <- 0.028316847 * inundate$Flow
 
 inundate$Acres <- inundate$Water_prop * 4729.367326
 inundate$Hectares <- inundate$Water_prop * 1913.907054
@@ -15,15 +16,15 @@ vdcdec <- ddply(na.omit(von[von$Flow > 0, ]), .(Date), summarize, Flow = mean(Fl
 
 # fit <- lm(Acres ~ log(Flow), data = inundate)
 fit <- lm(Water_prop ~ poly(Flow, 2, raw = T), data = inundate)
-
+fit.cms <- lm(Water_prop ~ poly(Flow.cms, 2, raw = T), data = inundate)
 # R <- function(b, abT) 1*(1 - exp(-b*abT))
 # form <- Water_prop ~ R(b,Flow)
 # fit <- nls(form, data=inundate, start=list(b=.000001))
 
-plot(inundate$Abundance,d$Richness, xlab="Abundance", ylab="Richness")
-lines(d$Abundance, predict(fit,list(x=d$Abundance)))
+# plot(inundate$Abundance,d$Richness, xlab="Abundance", ylab="Richness")
+# lines(d$Abundance, predict(fit,list(x=d$Abundance)))
 
-modassym <- nls(Water_prop ~ SSasymp( Flow, 1, 0, .01), data = inundate)
+# modassym <- nls(Water_prop ~ SSasymp( Flow, 1, 0, .01), data = inundate)
 
 stagefit <- lm(Water_prop ~ poly(Stage, 2, raw = T), data = inundate)
 # fit <- lm(Water_prop ~ -1/Stage, data = inundate)
@@ -50,12 +51,15 @@ vdsub <- vd[vd$Month %in% c(1:3),]
 vdsub$Flowrank <- rank(-vdsub$Flow)
 vdsub$prob <- 100 * (vdsub$Flowrank / (nrow(vdsub)+1))
 vdsub <- vdsub[order(vdsub$Flow),]
+vdsub$Flow.cms <- 0.028316847 * vdsub$Flow
 
 probfun <- approxfun(vdsub$prob ~ vdsub$Flow, method = "linear")
 flowfun <- approxfun(vdsub$Flow ~ vdsub$prob, method = "linear")
+probfun.cms <- approxfun(vdsub$prob ~ vdsub$Flow.cms, method = "linear")
+flowfun.cms <- approxfun(vdsub$Flow.cms ~ vdsub$prob, method = "linear")
 
 if(saveplots == TRUE){png("output/Sutter_inundate-flow_%03d.png", 
-                          height = 3.5, width = 6.5, units = "in", res = 500, family = "serif")}
+                          height = 4, width = 7, units = "in", res = 1000, family = "serif")}
 
 ggplot(inundate, aes(x = Stage, y = Water_prop)) + geom_point() + 
   stat_smooth(method = "lm", formula =  y ~ poly(x,2), se = F) + ylim(c(0,1.05)) +
@@ -108,6 +112,68 @@ polygon(c(seq(from = probfun(fre), to = 0, length.out = 1869),
           rev(seq(from = probfun(fre), to = 0, length.out = 1869))),
         c(vdsub[vdsub$Flow >= flowfun(probfun(fre)), "Flow"],
           rep(-1,1869)), col = rgb(0,0,1,.3))
+
+### CMS version -----------------------------------------------------
+
+a.cms <- as.numeric(coef(fit.cms)[3])
+b.cms <- as.numeric(coef(fit.cms)[2])
+c.cms <- as.numeric(coef(fit.cms)[1])
+zero.cms <- (-b.cms + sqrt(b.cms^2 - 4 * a.cms * c.cms))/(2*a.cms)
+fifty.cms <- (-b.cms + sqrt(b.cms^2 - 4 * a.cms * (c.cms-.5)))/(2*a.cms)
+fre.cms <- 0.028316847 * fre #1415.842
+
+##manuscript has 1622cms for fremont gage but this may overestimate threshold at Verona based on comparative analysis
+##1622/0.028316847 = 57280.39cfs, better visual fit to overtopping data at 50000cfs
+
+par(mfrow = c(1,2))
+par(mar = c(4,4,0,1), oma = c(0,0,1,0))
+
+##inundation flow relationship CMS
+plot(Water_prop ~ Flow.cms, inundate, ylim = c(0,1), xlim = c(zero.cms, max(inundate$Flow.cms)), xaxt = "n",
+     xlab = "Discharge (cms)", ylab = "Proportion inundated")
+axis(1, at = seq(0,10000, 500))
+abline(h = seq(0, 1, .10), lty = 3, col = rgb(0,0,0,.2))
+abline(v = seq(0, 100000, 10000), lty = 3, col = rgb(0,0,0,.2))
+
+lines(seq(from=500,to=8000,length.out=1000),
+      predict(fit.cms,newdata=list(Flow.cms=seq(from=500,to=8000,length.out=1000))))
+
+polygon(c(seq(from = zero.cms, to = fre.cms, length.out = 1000), 
+          rev(seq(from = zero.cms, to = fre.cms, length.out = 1000))),
+        c(predict(fit.cms,newdata=list(Flow.cms=seq(from=zero.cms,to=fre.cms,length.out=1000))), 
+          rep(0,1000)), col = rgb(1,0,0,.3))
+
+polygon(c(seq(from = fre.cms, to = 8500, length.out = 1000), 
+          rev(seq(from = fre.cms, to = 8500, length.out = 1000))),
+        c(predict(fit.cms,newdata=list(Flow.cms=seq(from=fre.cms,to=8500,length.out=1000))), 
+          rep(0,1000)), col = rgb(0,0,1,.3))
+abline(0,0)
+
+##flow duration curve
+plot(Flow.cms ~ prob, data = vdsub, type = "l", ylim = c(0, max(vdsub$Flow.cms)), yaxt = "n", 
+     xlab = "Exceedance percentage", ylab = "Discharge (cms)")
+axis(2, at = seq(0,10000, 500))
+abline(v = seq(0, 100, 10), lty = 3, col = rgb(0,0,0,.2))
+abline(h = seq(0, 3000, 500), lty = 3, col = rgb(0,0,0,.2))
+# segments(x0 = probfun(zero), y0 = 0, x1 = probfun(zero), y1 = zero, lwd = 1)
+segments(x0 = -20, y0 = zero.cms, x1 = probfun.cms(zero.cms), y1 = zero.cms, lwd = 1)
+# segments(x0 = probfun(fre), y0 = 0, x1 = probfun(fre), y1 = fre, lwd = 1)
+segments(x0 = -20, y0 = fre.cms, x1 = probfun.cms(fre.cms), y1 = fre.cms, lwd = 1)
+
+
+sfdc <- vdsub[vdsub$Flow.cms >= flowfun.cms(probfun.cms(zero.cms)) & 
+                vdsub$Flow.cms <= flowfun.cms(probfun.cms(fre.cms)), "Flow.cms"]
+ffdc <- vdsub[vdsub$Flow.cms >= flowfun.cms(probfun.cms(fre.cms)), "Flow.cms"]
+
+polygon(c(seq(from = probfun.cms(zero.cms), to = probfun.cms(fre.cms), length.out = length(sfdc)), 
+          rev(seq(from = probfun.cms(zero.cms), to = probfun.cms(fre.cms), length.out = length(sfdc)))),
+        c(sfdc,
+          rep(-1,length(sfdc))), col = rgb(1,0,0,.3))
+
+polygon(c(seq(from = probfun.cms(fre.cms), to = 0, length.out = length(ffdc)), 
+          rev(seq(from = probfun.cms(fre.cms), to = 0, length.out = length(ffdc)))),
+        c(ffdc,
+          rep(-1,length(ffdc))), col = rgb(0,0,1,.3))
 
 if(saveplots == TRUE)dev.off()
 
