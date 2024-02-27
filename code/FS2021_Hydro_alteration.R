@@ -307,14 +307,14 @@ hydro.day.new = function(x, start.month = 10L){
 #Plot full time series to view SHasta construction and 
 ggplot(bend, aes(x = Date, y = Flow)) + geom_line() + 
   geom_vline(xintercept = as.Date("1968-10-01"), color = "red") + 
-  geom_hline(yintercept = 40000) + theme_bw()
+  geom_hline(yintercept = 20000) + theme_bw()
 
 ggplot(bend[bend$Date > as.Date("1997-10-01") & bend$Date < as.Date("1999-9-30"),], aes(x = Date, y = Flow)) + 
   geom_ribbon(aes(ymax = Flow, ymin = 0), alpha = .5, fill = "skyblue") + geom_line() + 
-  geom_hline(yintercept = 40000, linetype = 2) + theme_bw() + scale_x_date(date_breaks = "4 months")
+  geom_hline(yintercept = 20000, linetype = 2) + theme_bw() + scale_x_date(date_breaks = "4 months")
 
 #Set flooding threshold
-bend$flood <- ifelse(bend$Flow > 40000, "over", "under")
+bend$flood <- ifelse(bend$Flow > 20000, "over", "under")
 bend$dam <- ifelse(bend$Date >= as.Date("1944-10-1"), "Post", "Pre")
 bend$dam <- factor(bend$dam, levels = c("Pre", "Post"))
 
@@ -424,3 +424,73 @@ ggplot(medflow, aes(x = wyjday, fill = damfac)) + #facet_grid(dam ~ ., scales = 
   scale_x_continuous(breaks = c(0, 31, 61, 92, 123, 151, 182, 212, 243, 273, 304, 334), 
                      labels = c("Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"))
 dev.off()
+
+
+
+# Bend frequency ----------------------------------------------------------
+
+#Provide each flood event with a unique ID
+bend$Flood_ID <- paste(bend$WY, sprintf("%06d", bend$runs), sep = "_")
+
+# Calculate metrics for each flood event ----------------------------------
+
+##Calculate rate of change
+bend$ratechange <- c(NA, diff(bend$Flow))
+
+#Identify rising or descending limbs of hydrograph
+bend$limb <- ifelse(bend$ratechange > 0, "rising", "descending")
+
+#Identify flood peaks and troughs
+bend <- merge(bend, data.frame(Date = bend[cumsum(rle(bend$limb)$lengths), "Date"], 
+                             Peak = ifelse(rle(bend$limb)$values == "descending", "trough", "peak")), 
+             by = "Date", all.x = T)
+
+##Add peak location and number of peaks per flood
+bendpeaks <- bend %>% filter(flood == "over" & Peak == "peak") %>% group_by(Flood_ID, Peak) %>% 
+  add_tally() %>% group_by(Flood_ID) %>% summarise(Peaks = mean(n))
+
+#Calculate flood event summary metrics
+bendsum <- bend %>% filter(#wyjday %in% 166:227 & 
+                             flood == "over") %>% group_by(Flood_ID, dam, WY) %>%
+  summarise(startdate = min(Date), enddate = max(Date), 
+            maxflow = max(Flow), meanflow = mean(Flow), sumflow = sum(Flow),
+            riserate = max(ratechange), fallrate = min(ratechange))
+
+##Merge flood summary metrics with flood peak metrics
+bendsum <- merge(bendsum, bendpeaks, by = "Flood_ID", all.x = T)
+
+##Calculate flood centroid date
+bendsum$centdate <- bendsum$startdate + floor((bendsum$enddate-bendsum$startdate)/2)
+
+##Calculate flood duration
+bendsum$duration <- as.numeric(bendsum$enddate - bendsum$startdate) + 1
+
+##Convert dates to julian water days
+bendsum$startday <- hydro.day.new(bendsum$startdate)
+bendsum$endday <- hydro.day.new(bendsum$enddate)
+bendsum$centday <- hydro.day.new(bendsum$enddate)
+
+##Center of flood timing prep
+bend$cttop <- bend$wyjday*bend$Flow
+hydro.day.new(as.Date("2023-3-15"))
+hydro.day.new(as.Date("2023-5-15"))
+
+annfloods <- bendsum %>% filter(duration>6) %>% group_by(WY) %>% 
+  summarize(totfloods = length(unique(Flood_ID)))
+range(annfloods$WY)
+
+for(i in 1891:2023){
+  print(i)
+  if(!(i %in% annfloods$WY)){
+    annfloods <- rbind(annfloods,data.frame(WY = i, totfloods = 0))
+  }
+}
+annfloods$Flyr <- ifelse(annfloods$totfloods > 0, 1, 0)
+ggplot(annfloods, aes(x = WY, y = totfloods)) + geom_point() + stat_smooth()
+
+1-(sum(annfloods[annfloods$WY >= 1943, "Flyr"])/nrow(annfloods[annfloods$WY >= 1943, "Flyr"]))/
+  (sum(annfloods[annfloods$WY < 1943, "Flyr"])/nrow(annfloods[annfloods$WY < 1943, "Flyr"]))
+
+bend$decade <- substr(bend$WY, 1, 3)
+
+ggplot(bend, aes(x = Flow)) + geom_histogram(fill = "black") + facet_grid(decade ~ Month, scales = "free_x") 
