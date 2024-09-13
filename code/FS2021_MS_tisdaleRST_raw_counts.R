@@ -55,7 +55,7 @@ ggplot(von[von$WY %in% c(2012:2021),], aes(x = wyjday, y = Flow)) + geom_line(co
   geom_ribbon(data = von[von$WY %in% c(2012:2021),],
               aes(ymin = 0, ymax = Flow), fill = "#56B4E9") + 
   scale_fill_brewer(palette = "Set1") + labs(x = NULL, y = "Discharge (cfs)") +
-  theme_classic() + 
+  theme_classic() + labs("Month of water year") +
   theme(legend.position = "bottom", panel.border = element_blank(), strip.text.y = element_blank()) + 
   facet_grid(WY ~ .) +
   geom_bar(data = datply, aes(x = wyjday, y = freq), stat = "identity") +
@@ -63,7 +63,9 @@ ggplot(von[von$WY %in% c(2012:2021),], aes(x = wyjday, y = Flow)) + geom_line(co
   scale_x_continuous(breaks = c(0, 31, 61, 92, 123, 151, 182, 212, 243, 273, 304, 334), limits = c(0,365), 
                      labels = c("Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"))
 
-facet_labs <- data.frame(WY = c(2010:2021), Lab = c(2010:2021))
+facet_labs <- data.frame(WY = c(2010:2021),
+                         wytype = c("BN", "W", "BN", "D", "C", "C", "BN", "W", "BN", "W", "D", "C"))
+facet_labs$Lab <- paste0(facet_labs$WY, " (", facet_labs$wytype, ")")
 coeff = 2000
 
 ggplot() + 
@@ -93,9 +95,9 @@ ggplot() +
   geom_bar(data = von[von$WY %in% c(2010:2021) & von$Flow > 50000,], aes(x = wyjday, y = Flow / coeff), 
            fill = "red", stat = "identity", alpha = .1, width = 3) +
   geom_line(data = von[von$WY %in% c(2010:2021),], aes(x = wyjday, y=Flow / coeff), color="grey") +
-  facet_wrap(WY ~ .) +
-  geom_text(data = facet_labs,aes(x = 330, y = 39, label = Lab), fontface = "bold", size = 3) +
-  scale_y_continuous( name = "Chinook % of total catch", breaks = seq(0,max(datply$freq, na.rm = T), 10),# first axis title
+  facet_wrap(WY ~ .) + labs(x = "Month of water year") +
+  geom_text(data = facet_labs,aes(x = 60, y = 39, label = Lab), fontface = "bold", size = 2.5) +
+  scale_y_continuous( name = "Chinook % of total WY catch", breaks = seq(0,max(datply$freq, na.rm = T), 10),# first axis title
                       sec.axis = sec_axis(~.*coeff, breaks = seq(0,100000,25000), 
                                           labels = paste(seq(0,100,25),"K", sep = ""), name = "Discharge (cfs)")) + 
   labs(x = NULL) +
