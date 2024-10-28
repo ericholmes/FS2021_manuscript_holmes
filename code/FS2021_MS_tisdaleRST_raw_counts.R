@@ -109,7 +109,7 @@ ggplot() +
 
 von$Flow.cms <- 0.028316847 * von$Flow
 coeff.cms = 0.028316847 *2000
-
+#bquote('Discharge ('~m^3~s^-1~")")
 ggplot() + 
   geom_ribbon(data = von[von$WY %in% c(2010:2021) & von$Flow.cms > 25000*0.028316847,],
               aes(x = wyjday, ymin = 0, ymax = Flow.cms / coeff.cms, group = Flood_ID), fill = "skyblue") + 
@@ -119,7 +119,8 @@ ggplot() +
   facet_wrap(WY ~ .) + labs(x = "Month of water year") +
   geom_text(data = facet_labs,aes(x = 60, y = 39, label = Lab), fontface = "bold", size = 2.5) +
   scale_y_continuous( name = "Chinook % of total WY catch", breaks = seq(0,max(datply$freq, na.rm = T), 10),# first axis title
-                      sec.axis = sec_axis(~.*coeff.cms, breaks = seq(0,3000,500), name = "Discharge (cms)")) + 
+                      sec.axis = sec_axis(~.*coeff.cms, breaks = seq(0,3000,500), 
+                                          name = bquote('Discharge'~(m^3~s^-1)))) + 
   geom_bar(data = datply, aes(x = wyjday, y = freq), stat = "identity", width = 2, fill = "black") + 
   theme_classic() + theme(strip.text.x = element_blank()) +
   scale_x_continuous(limits = c(0, 360),
