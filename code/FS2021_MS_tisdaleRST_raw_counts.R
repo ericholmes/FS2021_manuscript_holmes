@@ -87,7 +87,7 @@ ggplot() +
                      labels = c("O", "N", "D", "J", "F", "M", "A", "M", "J", "J", "A", "S")) 
 dev.off()
 
-png("output/chinook_VON_river_wrap_%03d.png", 
+tiff("output/chinook_VON_river_wrap_%03d.tiff", compression = "lzw",
     family = "serif", res = 1000, height = 4, width = 6.5, units = "in")
 ggplot() + 
   geom_ribbon(data = von[von$WY %in% c(2010:2021) & von$Flow > 25000,],

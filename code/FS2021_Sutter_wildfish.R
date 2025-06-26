@@ -1,9 +1,9 @@
-library(googlesheets4)
+# library(googlesheets4)
 library(dplyr)
 library(reshape2)
 library(ggplot2)
-library(plotly)
-library(lubridate)
+# library(plotly)
+# library(lubridate)
 
 #Set up fisher LAD class breaks
 mydata <- data.frame(Day=c(-31:150))
@@ -37,30 +37,39 @@ chinook$Count <- 1
 # chinook %>% group_by(Genetics_lab) %>% summarize(Count = sum(Count))
 
 chinply <- chinook %>% group_by(Gen_assign, Adipose, Year) %>% summarize(Count = sum(Count))
-chinply
-unique(chinook$Genetics)
 
-chinook$Trib <- ifelse(chinook$Location %in% c("Colusa Weir", "Willow Bend east side", "Sacramento River side channel ds Willow Bend", 
+
+chinook$Trib <- ifelse(chinook$Location %in% c("Colusa Weir", "Laux road rice field", "Sutter Bypass at Franklin road west side", 
+                                               "Tisdale Bypass at Reclamation Road bridge", "Willow Bend east side", 
+                                               "Willow Bend outlet", "Sacramento River side channel ds Willow Bend", 
                                                "Moulton Weir", "Willow Bend East side", "Willow Bend swale", 
-                                               "Sutter Bypass at Franklin road west side", 
-                                               "Tisdale Bypass at Reclamation Road bridge", "Willow Bend east margin", 
-                                               "Willow Bend outlet", "Sacramento River at Colusa Bend gravel bar", 
-                                               "Tisdale Bypass at Reclamation Rd", "Tisdale weir sill north corner"),"Sac River",
-                       ifelse(chinook$Location %in% c("Laux Road rice field", "Butte Sink north wetland at Mallard Ranch", 
-                                               "Butte Creek at Mallard Ranch", "Refuge southern wetland", "Refuge wetland north of Hughes Road", 
-                                               "Refuge inlet canal", "Lundberg Farms sothwest rice field outlet", "Refuge T8:3 outlet under Hughes Rd.",
-                                               "Refuge northern wetland inlet", "Refuge northern wetland east drain", 
-                                               "Refuge southern wetland east outlet", "Refuge southern wetland northwest inlet", 
-                                               "Refuge southern wetland north inlet from other wetland", "Refuge Northern wetland south check", 
-                                               "Refuge Southern wetland light bulb inlet", "Refuge northern weltand at inlet", 
-                                               "Refuge northeastern wetland at inlet", "Butte Creek at Laux Rd. boat launch", 
-                                               "Refuge north wetland T2:1 to T2:2 east structure", "Refuge Field 11:2 southwest main drain", 
-                                               "Refuge Northern wetland", "Butte Creek at Meridian Pass Rd pad", "Laux road rice field", 
-                                               "Refuge T5 wetland inlet", "Refuge T2:1 inlet", "Refuge T2:1 to T2:2 east culvert", 
-                                               "Refuge south entrance parking lot", "Refuge at flooded Oswald Rd",
-                                               "Refuge T17 northwest inlet", "Refuge T2-1 to T2-2 culvert", 
-                                               "Refuge T16 to T17 culvert", "Refuge inlet canal lightbulb south outlet"), "Butte", "Raccoons"))
-
+                                               "Sacramento River at Colusa Bend gravel bar", 
+                                               "Tisdale Bypass at Reclamation Rd", 
+                                               "Willow Bend east margin", "Tisdale weir sill north corner", 
+                                               "Sacramento River at Colusa City launch", "Sacramento River at side channel at Colusa weir", 
+                                               "Tisdale weir", "Colusa weir", "Tisdale bypass"),"Sac. River",
+                       ifelse(chinook$Location %in% c("Laux road rice field", "Sutter Bypass at Franklin road west side", "Laux Road rice field", 
+                                                      "Butte Sink north wetland at Mallard Ranch", 
+                                                      "Butte Creek at Mallard Ranch", "Refuge southern wetland", "Refuge wetland north of Hughes Road", 
+                                                      "Refuge inlet canal", "Lundberg Farms sothwest rice field outlet", 
+                                                      "Refuge northern wetland inlet", "Refuge northern wetland east drain", 
+                                                      "Refuge southern wetland east outlet", "Refuge southern wetland northwest inlet", 
+                                                      "Refuge southern wetland north inlet from other wetland", "Refuge Northern wetland south check", 
+                                                      "Refuge Southern wetland light bulb inlet", "Refuge northern weltand at inlet", 
+                                                      "Refuge northeastern wetland at inlet", "Butte Creek at Laux Rd. boat launch", 
+                                                      "Refuge north wetland T2:1 to T2:2 east structure", "Refuge Field 11:2 southwest main drain", "Refuge Northern wetland", 
+                                                      "Refuge T5 wetland inlet", "Refuge T2:1 inlet", "Refuge T2:1 to T2:2 east culvert", "Butte Creek at Meridian Pass Rd pad", 
+                                                      "Refuge south entrance parking lot", 
+                                                      "Refuge at flooded Oswald Rd", "Refuge T8:3 outlet under Hughes Rd.", "Refuge inlet canal lightbulb south outlet", 
+                                                      "Refuge T17 northwest inlet", "Refuge T16 to T17 culvert", "Refuge T2-1 to T2-2 culvert", "Butte Creek at Laux Rd.", "El Anzar drain at Driver Cut weir", 
+                                                      "Sanborn Slough wetland boat dock", "Sutter_NWR supply canal DS of lift pump", 
+                                                      "SBSNWR NW wetland near inlet", "Lundberg Farms phase I field","Boat channel at Sanborn Slough", 
+                                                      "North wetland at Mallard Ranch", "East margin of Sutter Bypass North of 113 and south of pumps", 
+                                                      "Sutter Bypass at Franklin Rd"), "Butte", 
+                              ifelse(chinook$Location %in% c("KNGFX", "CONRICE", 
+                                                             "Knaggs Field 2", "Knaggs Field 4", "Knaggs Field 5", "Knaggs Field 6", 
+                                                             "Knaggs Field 7", "Knaggs Field 8", "Knaggs Field 9", "Knaggs Field X"), "Yolo", "Raccoons")))
+                       
 
 png("output/Sutter_wildchinook_Jan2023_%03d.png",
     family = "serif", width = 7, height= 5, units = "in", res = 1000)
@@ -124,27 +133,6 @@ ggplot() +
 
 dev.off()
 
-ggplotly(ggplot(chinook, aes(x = Day, y = Fork_length_mm, color = Race_table, shape = Adipose)) + 
-  geom_jitter(alpha = .5) + theme_bw() +
-  scale_x_continuous(
-                     breaks = c(-32, 1, 32, 60, 91, 122, 152), 
-                     labels = c("Dec-1", "Jan-1", "Feb-1", "Mar-1", "Apr-1", "May-1", "Jun-1")) +
-  scale_shape_manual(values = c(3, 3, 19)) +
-  stat_function(fun = function(x) exp(3.516464 + 0.006574*(x+160)), color = "black") +
-  stat_function(fun = function(x) exp(3.516464 + 0.006574*(x+71)), color = "black") +
-  stat_function(fun = function(x) exp(3.516464 + 0.006574*(x+26)), color = "black"), layerdata = 3)
-
-ggplotly(ggplot(chinook, aes(x = Day, y = Fork_length_mm, color = Trib, shape = Adipose)) + 
-           geom_jitter(alpha = .5) + theme_bw() +
-           scale_y_continuous(limits = c(30,130),breaks = seq(0,200, 20)) +
-           scale_x_continuous(
-             breaks = c(-32, 1, 32, 60, 91, 122, 152), 
-             labels = c("Dec-1", "Jan-1", "Feb-1", "Mar-1", "Apr-1", "May-1", "Jun-1")) +
-           scale_shape_manual(values = c(3, 3, 19)) +
-           stat_function(fun = function(x) exp(3.516464 + 0.006574*(x+160)), color = "black") +
-           stat_function(fun = function(x) exp(3.516464 + 0.006574*(x+71)), color = "black") +
-           stat_function(fun = function(x) exp(3.516464 + 0.006574*(x+26)), color = "black"), layerdata = 3)
-
 # png("C:/Users/ejholmes/Box/PROJECTS/Sutter/Output/Report_figures/Sutter_2023/Dark_themed/Sutter_wildchinook_Jan2023_%03d.png", 
 #     family = "serif", width = 6.5, height= 4.5, units = "in", res = 1000)
 
@@ -168,13 +156,89 @@ ggplot(chinook, aes(x = Day)) +
   stat_function(fun = function(x) exp(3.516464 + 0.006574*(x+71)), color = "white", alpha = .5) +
   stat_function(fun = function(x) exp(3.516464 + 0.006574*(x+26)), color = "white", alpha = .5)
 
-ggdark::invert_geom_defaults()
-
 dev.off()
 
 sites <- unique(chinook$Location)
+# New figure for MS -------------------------------------------------------
 
-# Subset for genetics analysis --------------------------------------------
+## Notes from review: Reviewer 1 suggested this figure could be updated to 
+# emphasize the main take away addressed in the text (floodplain fish are bigger). 
+# The colored bands are LAD and not part of our text nor are they explained. 
+# Also, only wild FR and SR are discussed in the paragraph this figure is linked to. 
+# The suggestion is to remove the LAD bands, remove WR and LFR, remove other fish 
+# (hatchery ad clipped and unknown).  With these simplifications, could the data be 
+# combined into a single panel and color coded by run and location, as suggested by reviewer?  
+# Font type and sizing needs to adhere to the SFWES guidance as well.
+ggplot(chinook[chinook$Year %in% 2019:2023,], 
+       aes(x = Day, y = Fork_length_mm, color = Trib, shape = Gen_assign)) + 
+  geom_jitter(alpha = .5) + theme_bw() +
+  scale_x_continuous(limits = c(-0, 102),
+                     breaks = c(-32, 1, 32, 60, 91, 122, 152), 
+                     labels = c("Dec-1", "Jan-1", "Feb-1", "Mar-1", "Apr-1", "May-1", "Jun-1")) +
+  # scale_shape_manual(values = c(3, 19)) +
+  stat_function(fun = function(x) exp(3.516464 + 0.006574*(x+160)), color = "black") +
+  stat_function(fun = function(x) exp(3.516464 + 0.006574*(x+71)), color = "black") +
+  stat_function(fun = function(x) exp(3.516464 + 0.006574*(x+26)), color = "black")
+
+
+# Trying new plot with only genetically confirmed fall and spring runs
+
+ggplot(chinook[chinook$Year %in% 2019:2023 & chinook$Gen_assign %in% c("Fall", "Spring"),], 
+       aes(x = Day, y = Fork_length_mm, color = Trib, shape = Gen_assign)) + 
+  geom_jitter(alpha = .5) + theme_bw() +
+  scale_x_continuous(limits = c(-0, 102),
+                     breaks = c(-32, 1, 32, 60, 91, 122, 152), 
+                     labels = c("Dec-1", "Jan-1", "Feb-1", "Mar-1", "Apr-1", "May-1", "Jun-1")) 
+  # scale_shape_manual(values = c(3, 19)) +
+
+ggplot(chinook[chinook$Year %in% 2019:2023 & chinook$Gen_assign %in% c("Fall", "Spring"),], 
+       aes(x = Day, y = Fork_length_mm, color = Trib, shape = Gen_assign)) + 
+  geom_jitter(alpha = .5) + theme_bw() + stat_smooth( method = "lm") +
+  scale_x_continuous(limits = c(-0, 102),
+                     breaks = c(-32, 1, 32, 60, 91, 122, 152), 
+                     labels = c("Dec-1", "Jan-1", "Feb-1", "Mar-1", "Apr-1", "May-1", "Jun-1")) 
+
+ggplot(chinook[chinook$Year %in% 2019:2023 & chinook$Gen_assign %in% c("Fall", "Spring") &
+                 chinook$Adipose == "Intact",], 
+       aes(x = Day, y = Fork_length_mm, color = Trib)) + 
+  geom_jitter(alpha = .5, height = 0) + theme_bw() + stat_smooth( method = "lm") +
+  facet_grid(. ~ Gen_assign) +
+  scale_x_continuous(limits = c(-0, 102),
+                     breaks = c(-32, 1, 32, 60, 91, 122, 152), 
+                     labels = c("Dec-1", "Jan-1", "Feb-1", "Mar-1", "Apr-1", "May-1", "Jun-1")) 
+
+
+ggplot(chinook[chinook$Year %in% 2019:2023 & chinook$Gen_assign %in% c("Fall", "Spring") &
+                 chinook$Adipose == "Intact",], 
+       aes(x = Day, y = Fork_length_mm, color = Trib)) + 
+  geom_jitter(alpha = .5, height = 0) + theme_bw() + stat_smooth( method = "lm") +
+  facet_grid(. ~ Gen_assign) +
+  scale_x_continuous(limits = c(-0, 102),
+                     breaks = c(-32, 1, 32, 60, 91, 122, 152), 
+                     labels = c("Dec-1", "Jan-1", "Feb-1", "Mar-1", "Apr-1", "May-1", "Jun-1")) 
+
+(newmsfig <- ggplot(chinook[chinook$Year %in% 2019:2023 & chinook$Gen_assign %in% c("Fall", "Spring") &
+                 chinook$Adipose == "Intact",], 
+       aes(x = Day, y = Fork_length_mm, color = Trib)) + 
+  geom_jitter(aes(shape = Gen_assign), alpha = .75, height = 0) + theme_bw() + 
+  stat_smooth( method = "lm", se = F) +
+  labs(x = "Date", y = "Fork length (mm)", color = "Watershed", shape = "Run type") +
+  scale_shape_manual(values = c(17, 19)) +
+  scale_color_manual(values = c("salmon3", "cyan4")) +
+  scale_x_continuous(limits = c(-0, 100),
+                     breaks = c(-32, 1, 32, 60, 91, 122, 152), 
+                     labels = c("Dec-1", "Jan-1", "Feb-1", "Mar-1", "Apr-1", "May-1", "Jun-1")))
+
+jpeg("output/Sutter_wildchinook_singlepanel_%03d.jpg",
+    family = "serif", width = 7, height= 5, units = "in", res = 1000)
+newmsfig
+dev.off()
+
+tiff("output/Sutter_wildchinook_singlepanel_%03d.tiff", compression = "lzw",
+     family = "serif", width = 7, height= 5, units = "in", res = 1000)
+newmsfig
+dev.off()
+# Subset for genetics analysis -------------------------------------# Subset for genetics analysis -------------------------------------# Subset for genetics analysis --------------------------------------------
 # To run or not to run, that is the question
 # Objectives for identifying 142 samples to be run :
 #   1) isolate potential winter un for PBT - give to Rachel (does not count against the 142 wells)
